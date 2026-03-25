@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pedido de Lanche — Usimetal</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo-area">
+          <img src="assets/logo.png" alt="Usimetal" style="width:40px;height:40px;object-fit:contain;border-radius:var(--radius-md);" />
+          <div>
+            <div class="logo-nome">USIMETAL</div>
+            <div class="logo-sub">Pedido de Lanche — Hora Extra</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <span class="relogio" id="relogio"></span>
+          <span class="data-atual" id="data-atual"></span>
+          <span
+            id="rh-badge"
+            style="
+              display: none;
+              align-items: center;
+              gap: 6px;
+              background: var(--orange-bg);
+              border: 1px solid var(--orange);
+              border-radius: 100px;
+              padding: 3px 10px;
+              font-size: 11px;
+              color: var(--orange-light);
+              margin-top: 4px;
+            "
+          >
+            🔓 RH &nbsp;<button
+              onclick="sairRH()"
+              style="
+                background: none;
+                border: none;
+                color: var(--orange-light);
+                cursor: pointer;
+                font-size: 11px;
+                padding: 0;
+                font-family: var(--font);
+              "
+            >
+              Sair
+            </button>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="tabs">
+        <button class="tab active" data-tab="pedido" onclick="setTab('pedido')">
+          Novo Pedido
+        </button>
+        <button
+          class="tab tab-locked"
+          data-tab="painel"
+          onclick="abrirPin('painel')"
+        >
+          🔒 Painel RH
+        </button>
+        <button
+          class="tab tab-locked"
+          data-tab="whatsapp"
+          onclick="abrirPin('whatsapp')"
+        >
+          🔒 Enviar para Padaria
+        </button>
+        <button
+          class="tab tab-locked"
+          data-tab="setores"
+          onclick="abrirPin('setores')"
+        >
+          🔒 Setores
+        </button>
+        <button
+          class="tab tab-locked"
+          data-tab="relatorio"
+          onclick="abrirPin('relatorio')"
+        >
+          🔒 Relatório
+        </button>
+      </div>
+
+      <!-- ========== MODAL PIN ========== -->
+      <div
+        class="pin-overlay"
+        id="pin-overlay"
+        onclick="fecharPinOverlay(event)"
+      >
+        <div class="pin-modal">
+          <div class="pin-logo">🔐</div>
+          <h2 class="pin-title">Acesso RH</h2>
+          <p class="pin-sub">Digite o PIN de 4 dígitos</p>
+          <div class="pin-inputs" id="pin-inputs">
+            <input
+              class="pin-digit"
+              type="password"
+              maxlength="1"
+              inputmode="numeric"
+              pattern="[0-9]"
+              id="pin0"
+              oninput="pinDigit(0)"
+              onkeydown="pinKey(event, 0)"
+            />
+            <input
+              class="pin-digit"
+              type="password"
+              maxlength="1"
+              inputmode="numeric"
+              pattern="[0-9]"
+              id="pin1"
+              oninput="pinDigit(1)"
+              onkeydown="pinKey(event, 1)"
+            />
+            <input
+              class="pin-digit"
+              type="password"
+              maxlength="1"
+              inputmode="numeric"
+              pattern="[0-9]"
+              id="pin2"
+              oninput="pinDigit(2)"
+              onkeydown="pinKey(event, 2)"
+            />
+            <input
+              class="pin-digit"
+              type="password"
+              maxlength="1"
+              inputmode="numeric"
+              pattern="[0-9]"
+              id="pin3"
+              oninput="pinDigit(3)"
+              onkeydown="pinKey(event, 3)"
+            />
+          </div>
+          <div class="pin-erro" id="pin-erro"></div>
+          <div class="pin-actions">
+            <button class="btn btn-outline" onclick="fecharPin()">
+              Cancelar
+            </button>
+            <button class="btn btn-primary" onclick="confirmarPin()">
+              Entrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== PEDIDO ========== -->
+      <section class="section active" id="sec-pedido">
+        <div id="alert-deadline"></div>
+
+        <div class="card">
+          <h2 class="card-title">Informações do Setor</h2>
+          <div class="form-row">
+            <div class="field">
+              <label for="data">Data da entrega do lanche *</label>
+              <input type="date" id="data" />
+            </div>
+            <div class="field">
+              <label for="setor">Setor / Departamento *</label>
+              <select id="setor">
+                <option value="">Carregando setores...</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="qtd">Quantidade de pessoas *</label>
+              <input type="number" id="qtd" min="1" placeholder="Ex: 3" />
+            </div>
+            <div class="field">
+              <label for="horario">Horário *</label>
+              <select id="horario">
+                <option value="">Selecione...</option>
+                <option value="Manhã 07:00">Manhã 07:00</option>
+                <option value="Tarde 15:00">Tarde 15:00</option>
+                <option value="Noite 20:00">Noite 20:00</option>
+                <option value="Madrugada">Madrugada</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Lanches</h2>
+          <p class="card-hint">Quantidade por pessoa = 2 pães ou 3 massinhas</p>
+          <div class="form-row triple">
+            <div class="field">
+              <label for="pao">Pão (unid.)</label>
+              <input type="number" id="pao" min="0" placeholder="0" />
+            </div>
+            <div class="field">
+              <label for="massinha">Massinha (unid.)</label>
+              <input type="number" id="massinha" min="0" placeholder="0" />
+            </div>
+            <div class="field">
+              <label for="cafe">Café (unid.)</label>
+              <input type="number" id="cafe" min="0" placeholder="0" />
+            </div>
+          </div>
+          <div class="form-row full">
+            <div class="field">
+              <label for="sabor-lanche"
+                >Tipo do pão / Sabor das massinhas</label
+              >
+              <input
+                type="text"
+                id="sabor-lanche"
+                placeholder="Ex: presunto e queijo, só queijo, coco, chocolate..."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Bebidas</h2>
+          <p class="card-hint">
+            1 pessoa = 1 Refri Lata ou 1 Chocoleite 260ml &nbsp;|&nbsp; 3 a 5
+            pessoas = 1 Refri 2L ou 1 Chocoleite 900ml
+          </p>
+          <div class="form-row triple">
+            <div class="field">
+              <label for="choco260">Chocoleite 260ml</label>
+              <input type="number" id="choco260" min="0" placeholder="0" />
+            </div>
+            <div class="field">
+              <label for="choco900">Chocoleite 900ml</label>
+              <input type="number" id="choco900" min="0" placeholder="0" />
+            </div>
+            <div class="field">
+              <label for="refri-lata">Refri Lata</label>
+              <input type="number" id="refri-lata" min="0" placeholder="0" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="refri2l">Refri 2L (qtd.)</label>
+              <input type="number" id="refri2l" min="0" placeholder="0" />
+            </div>
+            <div class="field">
+              <label for="sabor-refri">Sabor do refrigerante</label>
+              <select id="sabor-refri">
+                <option value="">Nenhum / Não se aplica</option>
+                <option value="Limão">Limão</option>
+                <option value="Laranjinha">Laranjinha</option>
+                <option value="Guaraná">Guaraná</option>
+                <option value="Soda">Soda</option>
+                <option value="Fanta">Fanta</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Observações</h2>
+          <div class="field">
+            <label for="obs">Observações adicionais</label>
+            <textarea
+              id="obs"
+              placeholder="Informações extras, restrições alimentares, etc..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div
+          id="msg-erro"
+          class="alert alert-danger"
+          style="display: none"
+        ></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="salvarPedido()">
+            Salvar Pedido
+          </button>
+          <button class="btn btn-outline" onclick="limparForm()">Limpar</button>
+        </div>
+      </section>
+
+      <!-- ========== PAINEL RH ========== -->
+      <section class="section" id="sec-painel">
+        <div class="stats" id="stats-cards"></div>
+        <div class="painel-header">
+          <h2 class="section-title">Pedidos registrados</h2>
+          <button class="btn btn-danger-outline" onclick="limparTodos()">
+            Limpar todos
+          </button>
+        </div>
+        <div id="lista-pedidos"></div>
+      </section>
+
+      <!-- ========== WHATSAPP ========== -->
+      <section class="section" id="sec-whatsapp">
+        <div class="card">
+          <h2 class="card-title">Mensagem para a Padaria</h2>
+          <p class="card-hint">
+            Consolidado de todos os pedidos do dia, formatado para enviar pelo
+            WhatsApp.
+          </p>
+          <pre class="wpp-preview" id="wpp-text"></pre>
+          <div class="btn-row" style="margin-top: 1rem">
+            <button class="btn btn-primary" onclick="copiarWpp()">
+              Copiar mensagem
+            </button>
+            <button class="btn btn-outline" onclick="abrirWpp()">
+              Abrir WhatsApp
+            </button>
+          </div>
+          <div
+            id="msg-copiado"
+            class="alert alert-success"
+            style="display: none; margin-top: 10px"
+          >
+            Mensagem copiada com sucesso!
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== SETORES ========== -->
+      <section class="section" id="sec-setores">
+        <div class="card">
+          <h2 class="card-title">Gerenciar Setores</h2>
+          <p class="card-hint">
+            Os setores cadastrados aqui aparecem como opções no formulário de
+            pedido.
+          </p>
+          <div class="form-row" style="align-items: flex-end">
+            <div class="field">
+              <label for="novo-setor">Nome do setor</label>
+              <input
+                type="text"
+                id="novo-setor"
+                placeholder="Ex: Manutenção, TI, Produção..."
+                onkeydown="if (event.key === 'Enter') adicionarSetor();"
+              />
+            </div>
+            <div>
+              <button
+                class="btn btn-primary"
+                onclick="adicionarSetor()"
+                style="width: 100%"
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+          <div
+            id="msg-setor"
+            class="alert"
+            style="display: none; margin-top: 8px"
+          ></div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Setores cadastrados</h2>
+          <div id="lista-setores"></div>
+        </div>
+      </section>
+      <!-- ========== RELATÓRIO ========== -->
+      <section class="section" id="sec-relatorio">
+        <!-- preenchido por renderRelatorio() -->
+      </section>
+
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
