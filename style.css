@@ -237,7 +237,7 @@ body {
 .field select:focus,
 .field textarea:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(232, 128, 10, 0.15);
+  box-shadow: 0 0 0 3px #e8800a26;
 }
 
 .field select { cursor: pointer; }
@@ -418,10 +418,10 @@ body {
   white-space: nowrap;
 }
 
-.badge-manha    { background: rgba(26,95,168,0.12);  color: #0d3d6e; border: 1px solid #1a5fa8; }
-.badge-tarde    { background: rgba(26,95,168,0.18);   color: #134a87; border: 1px solid #1a5fa8; }
-.badge-noite    { background: rgba(60,40,140,0.1);   color: #3c288c; border: 1px solid #5040a0; }
-.badge-madrugada{ background: rgba(80,100,120,0.12); color: #445566; border: 1px solid #8899aa; }
+.badge-manha    { background: #1a5fa81f;  color: #0d3d6e; border: 1px solid #1a5fa8; }
+.badge-tarde    { background: #1a5fa82e;   color: #134a87; border: 1px solid #1a5fa8; }
+.badge-noite    { background: #3c288c1a;   color: #3c288c; border: 1px solid #5040a0; }
+.badge-madrugada{ background: #5064781f; color: #445566; border: 1px solid #8899aa; }
 
 /* ---- WHATSAPP PREVIEW ---- */
 .wpp-preview {

@@ -1,24 +1,116 @@
+// ============================================================
+//  CONFIGURAÇÃO SUPABASE
+// ============================================================
+const SUPABASE_URL = 'https://gnfottqvxqtfrxftoxmg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_xnThR76-u89SSctSORpu6Q_h0zPfkRI';
+
+async function sbFetch(path, options = {}) {
+  var res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: Object.assign({
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }, options.headers || {}),
+    method: options.method || 'GET',
+    body: options.body || undefined
+  });
+  if (!res.ok) {
+    var err = await res.text();
+    throw new Error(err);
+  }
+  var text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+// ============================================================
 //  SETORES — edite a lista abaixo se precisar
+// ============================================================
 var SETORES = [
   'RH', 'Compras', 'Financeiro', 'PCP', 'Projetos',
   'Programação', 'Corte', 'Dobra', 'Solda', 'DCQ',
   'Pintura', 'Ajustagem', 'Montagem', 'Expedição'
 ];
 
-//  PIN DE ACESSO RH — altere aqui:
-
 const PIN_CORRETO = '1234';
 let pinDestino    = null;
 let rhAutenticado = false;
 
-let pedidos = JSON.parse(localStorage.getItem('pedidos_usimetal') || '[]');
+let pedidos = [];
 let setores = SETORES.map(function(nome, i){ return { id: i+1, nome: nome }; });
 
-function salvarStorage() {
-  localStorage.setItem('pedidos_usimetal', JSON.stringify(pedidos));
+// ============================================================
+//  CARREGAR PEDIDOS DO SUPABASE
+// ============================================================
+async function carregarPedidos() {
+  try {
+    var data = await sbFetch('pedidos?ativo=eq.true&order=id.desc');
+    pedidos = data.map(function(p) {
+      return {
+        id:          p.id,
+        data:        p.data,
+        setor:       p.setor,
+        qtd:         p.qtd,
+        horario:     p.horario,
+        pao:         p.pao,
+        massinha:    p.massinha,
+        cafe:        p.cafe,
+        saborLanche: p.sabor_lanche,
+        choco260:    p.choco260,
+        choco900:    p.choco900,
+        refriLata:   p.refri_lata,
+        refri2l:     p.refri2l,
+        saborRefri:  p.sabor_refri,
+        obs:         p.obs,
+        criadoEm:    p.criado_em
+      };
+    });
+  } catch(e) {
+    console.error('Erro ao carregar pedidos:', e);
+  }
 }
 
-// ---- RELÓGIO E DATA ----
+// ============================================================
+//  SALVAR PEDIDO NO SUPABASE
+// ============================================================
+async function salvarPedidoSupabase(pedido) {
+  return await sbFetch('pedidos', {
+    method: 'POST',
+    body: JSON.stringify({
+      id:           pedido.id,
+      data:         pedido.data,
+      setor:        pedido.setor,
+      qtd:          pedido.qtd,
+      horario:      pedido.horario,
+      pao:          pedido.pao,
+      massinha:     pedido.massinha,
+      cafe:         pedido.cafe,
+      sabor_lanche: pedido.saborLanche,
+      choco260:     pedido.choco260,
+      choco900:     pedido.choco900,
+      refri_lata:   pedido.refriLata,
+      refri2l:      pedido.refri2l,
+      sabor_refri:  pedido.saborRefri,
+      obs:          pedido.obs,
+      criado_em:    pedido.criadoEm,
+      ativo:        true
+    })
+  });
+}
+
+// ============================================================
+//  EXCLUIR PEDIDO — marca como inativo (não some do relatório)
+// ============================================================
+async function excluirPedidoSupabase(id) {
+  return await sbFetch('pedidos?id=eq.' + id, {
+    method: 'PATCH',
+    body: JSON.stringify({ ativo: false })
+  });
+}
+
+// ============================================================
+//  RELÓGIO E DATA
+// ============================================================
 function updateRelogio() {
   var now = new Date();
   var h = String(now.getHours()).padStart(2,'0');
@@ -49,19 +141,23 @@ function checkDeadline() {
   }
 }
 
-// ---- TABS ----
+// ============================================================
+//  TABS
+// ============================================================
 function setTab(tab) {
   document.querySelectorAll('.tab').forEach(function(el){ el.classList.remove('active'); });
   document.querySelectorAll('.section').forEach(function(el){ el.classList.remove('active'); });
   document.querySelector('.tab[data-tab="' + tab + '"]').classList.add('active');
   document.getElementById('sec-' + tab).classList.add('active');
-  if (tab === 'painel')    renderPainel();
-  if (tab === 'whatsapp')  renderWpp();
+  if (tab === 'painel')    { carregarPedidos().then(renderPainel); }
+  if (tab === 'whatsapp')  { carregarPedidos().then(renderWpp); }
   if (tab === 'setores')   renderSetores();
   if (tab === 'relatorio') renderRelatorio();
 }
 
-// ---- HELPERS ----
+// ============================================================
+//  HELPERS
+// ============================================================
 function v(id) { return document.getElementById(id).value.trim(); }
 function n(id) { return parseInt(document.getElementById(id).value) || 0; }
 
@@ -80,7 +176,6 @@ function mostrarFeedback(secId, classe, msg) {
   el.textContent = msg;
   el.style.marginTop = '12px';
   var sec = document.getElementById(secId);
-  // Insere depois dos botões (ao final da seção)
   var btnRow = sec.querySelector('.btn-row');
   if (btnRow) {
     btnRow.insertAdjacentElement('afterend', el);
@@ -91,7 +186,9 @@ function mostrarFeedback(secId, classe, msg) {
   setTimeout(function(){ el.remove(); }, 4000);
 }
 
-// ---- POPULAR SELECT DE SETORES ----
+// ============================================================
+//  POPULAR SELECT DE SETORES
+// ============================================================
 function popularSelectSetor() {
   var sel = document.getElementById('setor');
   sel.innerHTML = '<option value="">Selecione o setor...</option>';
@@ -103,8 +200,10 @@ function popularSelectSetor() {
   });
 }
 
-// ---- SALVAR PEDIDO ----
-function salvarPedido() {
+// ============================================================
+//  SALVAR PEDIDO
+// ============================================================
+async function salvarPedido() {
   var err = document.getElementById('msg-erro');
   if (!v('data') || !v('setor') || !n('qtd') || !v('horario')) {
     err.style.display = 'block';
@@ -122,13 +221,20 @@ function salvarPedido() {
     criadoEm: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })
   };
 
-  pedidos.unshift(pedido);
-  salvarStorage();
-  limparForm();
-  mostrarFeedback('sec-pedido', 'alert-success', '✅ Pedido salvo com sucesso! Confira no Painel RH.');
+  try {
+    await salvarPedidoSupabase(pedido);
+    pedidos.unshift(pedido);
+    limparForm();
+    mostrarFeedback('sec-pedido', 'alert-success', '✅ Pedido salvo com sucesso! Confira no Painel RH.');
+  } catch(e) {
+    mostrarFeedback('sec-pedido', 'alert-danger', '❌ Erro ao salvar pedido. Verifique a conexão.');
+    console.error(e);
+  }
 }
 
-// ---- BADGE HORÁRIO ----
+// ============================================================
+//  BADGE HORÁRIO
+// ============================================================
 function badgeHorario(h) {
   if (h && h.indexOf('Manhã') >= 0)  return '<span class="badge badge-manha">Manhã 07:00</span>';
   if (h && h.indexOf('Tarde') >= 0)  return '<span class="badge badge-tarde">Tarde 15:00</span>';
@@ -136,7 +242,9 @@ function badgeHorario(h) {
   return '<span class="badge badge-madrugada">Madrugada</span>';
 }
 
-// ---- PAINEL RH ----
+// ============================================================
+//  PAINEL RH
+// ============================================================
 function renderPainel() {
   var totalPedidos = pedidos.length;
   var totalPessoas = pedidos.reduce(function(a,p){ return a+(p.qtd||0); },0);
@@ -155,14 +263,14 @@ function renderPainel() {
   lista.innerHTML = pedidos.map(function(p) {
     var dataFmt = p.data ? new Date(p.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var itens = [];
-    if(p.pao)        itens.push('Pão: '+p.pao+' unid.');
-    if(p.massinha)   itens.push('Massinha: '+p.massinha+' unid.');
-    if(p.cafe)       itens.push('Café: '+p.cafe+' unid.');
+    if(p.pao)         itens.push('Pão: '+p.pao+' unid.');
+    if(p.massinha)    itens.push('Massinha: '+p.massinha+' unid.');
+    if(p.cafe)        itens.push('Café: '+p.cafe+' unid.');
     if(p.saborLanche) itens.push('Sabor: '+p.saborLanche);
-    if(p.choco260)   itens.push('Chocoleite 260ml: '+p.choco260);
-    if(p.choco900)   itens.push('Chocoleite 900ml: '+p.choco900);
-    if(p.refriLata)  itens.push('Refri Lata: '+p.refriLata);
-    if(p.refri2l)    itens.push('Refri 2L: '+p.refri2l+(p.saborRefri?' ('+p.saborRefri+')':''));
+    if(p.choco260)    itens.push('Chocoleite 260ml: '+p.choco260);
+    if(p.choco900)    itens.push('Chocoleite 900ml: '+p.choco900);
+    if(p.refriLata)   itens.push('Refri Lata: '+p.refriLata);
+    if(p.refri2l)     itens.push('Refri 2L: '+p.refri2l+(p.saborRefri?' ('+p.saborRefri+')':''));
     return '<div class="pedido-item">'+
       '<div>'+badgeHorario(p.horario)+'</div>'+
       '<div>'+
@@ -177,8 +285,40 @@ function renderPainel() {
   }).join('');
 }
 
-// ---- RELATÓRIO MENSAL (aba própria) ----
-function renderRelatorio() {
+// ============================================================
+//  EXCLUIR PEDIDO
+// ============================================================
+async function excluirPedido(id) {
+  if (!confirm('Excluir este pedido?')) return;
+  try {
+    await excluirPedidoSupabase(id);
+    pedidos = pedidos.filter(function(p){ return p.id !== id; });
+    renderPainel();
+  } catch(e) {
+    alert('Erro ao excluir pedido. Verifique a conexão.');
+    console.error(e);
+  }
+}
+
+async function limparTodos() {
+  if (!confirm('Excluir TODOS os pedidos? Esta ação não pode ser desfeita.')) return;
+  try {
+    await sbFetch('pedidos?ativo=eq.true', {
+      method: 'PATCH',
+      body: JSON.stringify({ ativo: false })
+    });
+    pedidos = [];
+    renderPainel();
+  } catch(e) {
+    alert('Erro ao limpar pedidos. Verifique a conexão.');
+    console.error(e);
+  }
+}
+
+// ============================================================
+//  RELATÓRIO MENSAL — usa TODOS os pedidos (ativos + excluídos)
+// ============================================================
+async function renderRelatorio() {
   var mesAtual = new Date().getMonth();
   var anoAtual = new Date().getFullYear();
   var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -188,7 +328,15 @@ function renderRelatorio() {
   var filtroMes = selMes ? parseInt(selMes.value) : mesAtual;
   var filtroAno = selAno ? parseInt(selAno.value) : anoAtual;
 
-  var pedidosFiltrados = pedidos.filter(function(p) {
+  var todosDoPeriodo = [];
+  try {
+    // Busca TODOS (ativos e inativos) para o relatório ficar completo
+    todosDoPeriodo = await sbFetch('pedidos?order=id.desc');
+  } catch(e) {
+    console.error('Erro ao carregar relatório:', e);
+  }
+
+  var pedidosFiltrados = todosDoPeriodo.filter(function(p) {
     if (!p.data) return false;
     var d = new Date(p.data + 'T12:00:00');
     return d.getMonth() === filtroMes && d.getFullYear() === filtroAno;
@@ -198,14 +346,14 @@ function renderRelatorio() {
   pedidosFiltrados.forEach(function(p) {
     var s = p.setor || 'Sem setor';
     if (!porSetor[s]) porSetor[s] = { qtd:0, pao:0, massinha:0, cafe:0, choco260:0, choco900:0, refriLata:0, refri2l:0 };
-    porSetor[s].qtd      += p.qtd      || 0;
-    porSetor[s].pao      += p.pao      || 0;
-    porSetor[s].massinha += p.massinha || 0;
-    porSetor[s].cafe     += p.cafe     || 0;
-    porSetor[s].choco260 += p.choco260 || 0;
-    porSetor[s].choco900 += p.choco900 || 0;
-    porSetor[s].refriLata+= p.refriLata|| 0;
-    porSetor[s].refri2l  += p.refri2l  || 0;
+    porSetor[s].qtd      += p.qtd       || 0;
+    porSetor[s].pao      += p.pao       || 0;
+    porSetor[s].massinha += p.massinha  || 0;
+    porSetor[s].cafe     += p.cafe      || 0;
+    porSetor[s].choco260 += p.choco260  || 0;
+    porSetor[s].choco900 += p.choco900  || 0;
+    porSetor[s].refriLata+= p.refri_lata|| 0;
+    porSetor[s].refri2l  += p.refri2l   || 0;
   });
 
   var optsMes = meses.map(function(m,i){
@@ -271,13 +419,13 @@ function renderRelatorio() {
             '<tr style="border-bottom:2px solid var(--border);background:var(--bg-page);">'+
               '<th style="text-align:left;padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Setor</th>'+
               '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">Pessoas</th>'+
-              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">🥐 Pão</th>'+
-              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">🥐 Massinha</th>'+
-              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">☕ Café</th>'+
-              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">🍫 260ml</th>'+
-              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">🍫 900ml</th>'+
-              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">🥤 R.Lata</th>'+
-              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">🥤 R.2L</th>'+
+              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">Pão</th>'+
+              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">Massinha</th>'+
+              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">Café</th>'+
+              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">260ml</th>'+
+              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">900ml</th>'+
+              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">R.Lata</th>'+
+              '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">R.2L</th>'+
             '</tr>'+
           '</thead>'+
           '<tbody>'+linhasTabela+totalLinhaHTML+'</tbody>'+
@@ -288,13 +436,20 @@ function renderRelatorio() {
   document.getElementById('sec-relatorio').innerHTML = conteudo;
 }
 
-// ---- EXPORTAR RELATÓRIO (CSV) ----
-function exportarRelatorio() {
+// ============================================================
+//  EXPORTAR CSV
+// ============================================================
+async function exportarRelatorio() {
   var filtroMes = parseInt(document.getElementById('rel-filtro-mes').value);
   var filtroAno = parseInt(document.getElementById('rel-filtro-ano').value);
   var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-  var pedidosFiltrados = pedidos.filter(function(p) {
+  var todosDoPeriodo = [];
+  try {
+    todosDoPeriodo = await sbFetch('pedidos?order=id.desc');
+  } catch(e) { console.error(e); return; }
+
+  var pedidosFiltrados = todosDoPeriodo.filter(function(p) {
     if (!p.data) return false;
     var d = new Date(p.data + 'T12:00:00');
     return d.getMonth() === filtroMes && d.getFullYear() === filtroAno;
@@ -304,14 +459,14 @@ function exportarRelatorio() {
   pedidosFiltrados.forEach(function(p) {
     var s = p.setor || 'Sem setor';
     if (!porSetor[s]) porSetor[s] = { qtd:0, pao:0, massinha:0, cafe:0, choco260:0, choco900:0, refriLata:0, refri2l:0 };
-    porSetor[s].qtd      += p.qtd      || 0;
-    porSetor[s].pao      += p.pao      || 0;
-    porSetor[s].massinha += p.massinha || 0;
-    porSetor[s].cafe     += p.cafe     || 0;
-    porSetor[s].choco260 += p.choco260 || 0;
-    porSetor[s].choco900 += p.choco900 || 0;
-    porSetor[s].refriLata+= p.refriLata|| 0;
-    porSetor[s].refri2l  += p.refri2l  || 0;
+    porSetor[s].qtd      += p.qtd       || 0;
+    porSetor[s].pao      += p.pao       || 0;
+    porSetor[s].massinha += p.massinha  || 0;
+    porSetor[s].cafe     += p.cafe      || 0;
+    porSetor[s].choco260 += p.choco260  || 0;
+    porSetor[s].choco900 += p.choco900  || 0;
+    porSetor[s].refriLata+= p.refri_lata|| 0;
+    porSetor[s].refri2l  += p.refri2l   || 0;
   });
 
   var csv = 'Setor;Pessoas;Pão;Massinha;Café;Chocoleite 260ml;Chocoleite 900ml;Refri Lata;Refri 2L\n';
@@ -329,21 +484,9 @@ function exportarRelatorio() {
   URL.revokeObjectURL(url);
 }
 
-function excluirPedido(id) {
-  if (!confirm('Excluir este pedido?')) return;
-  pedidos = pedidos.filter(function(p){ return p.id !== id; });
-  salvarStorage();
-  renderPainel();
-}
-
-function limparTodos() {
-  if (!confirm('Excluir TODOS os pedidos? Esta ação não pode ser desfeita.')) return;
-  pedidos = [];
-  salvarStorage();
-  renderPainel();
-}
-
-// ---- SETORES — tela de gerenciamento ----
+// ============================================================
+//  SETORES
+// ============================================================
 function renderSetores() {
   var lista = document.getElementById('lista-setores');
   if (!setores.length) {
@@ -361,8 +504,8 @@ function renderSetores() {
 }
 
 function adicionarSetor() {
-  var nome   = document.getElementById('novo-setor').value.trim();
-  var msgEl  = document.getElementById('msg-setor');
+  var nome  = document.getElementById('novo-setor').value.trim();
+  var msgEl = document.getElementById('msg-setor');
   msgEl.style.display = 'none';
 
   if (!nome) {
@@ -404,42 +547,44 @@ function salvarSetoresStorage() {
   localStorage.setItem('setores_usimetal', JSON.stringify(setores));
 }
 
-// ---- WHATSAPP ----
+// ============================================================
+//  WHATSAPP
+// ============================================================
 function gerarMensagem() {
   if (!pedidos.length) return 'Nenhum pedido registrado.';
   var agora = new Date().toLocaleString('pt-BR');
   var sep   = '──────────────────────────────────────';
-  var msg   = '🏭 *USIMETAL — PEDIDO DE LANCHE (HORA EXTRA)*\n📅 Gerado em: '+agora+'\n'+sep+'\n';
+  var msg   = ' USIMETAL — PEDIDO DE LANCHE (HORA EXTRA)\n Gerado em: '+agora+'\n'+sep+'\n';
   pedidos.forEach(function(p,i){
     var dataFmt = p.data ? new Date(p.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     msg += '\n*'+(i+1)+'. '+p.setor.toUpperCase()+'*\n';
     msg += '• Data: '+dataFmt+'\n• Horário: '+p.horario+'\n• Pessoas: '+p.qtd+'\n';
-    if(p.pao)        msg+='• Pão: '+p.pao+' unid.\n';
-    if(p.massinha)   msg+='• Massinha: '+p.massinha+' unid.\n';
-    if(p.cafe)       msg+='• Café: '+p.cafe+' unid.\n';
+    if(p.pao)         msg+='• Pão: '+p.pao+' unid.\n';
+    if(p.massinha)    msg+='• Massinha: '+p.massinha+' unid.\n';
+    if(p.cafe)        msg+='• Café: '+p.cafe+' unid.\n';
     if(p.saborLanche) msg+='• Sabor/Tipo: '+p.saborLanche+'\n';
-    if(p.choco260)   msg+='• Chocoleite 260ml: '+p.choco260+'\n';
-    if(p.choco900)   msg+='• Chocoleite 900ml: '+p.choco900+'\n';
-    if(p.refriLata)  msg+='• Refri Lata: '+p.refriLata+'\n';
-    if(p.refri2l)    msg+='• Refri 2L: '+p.refri2l+(p.saborRefri?' ('+p.saborRefri+')':'')+'\n';
-    if(p.obs)        msg+='• Obs: '+p.obs+'\n';
+    if(p.choco260)    msg+='• Chocoleite 260ml: '+p.choco260+'\n';
+    if(p.choco900)    msg+='• Chocoleite 900ml: '+p.choco900+'\n';
+    if(p.refriLata)   msg+='• Refri Lata: '+p.refriLata+'\n';
+    if(p.refri2l)     msg+='• Refri 2L: '+p.refri2l+(p.saborRefri?' ('+p.saborRefri+')':'')+'\n';
+    if(p.obs)         msg+='• Obs: '+p.obs+'\n';
   });
-  msg+='\n'+sep+'\n*📊 TOTAIS*\n';
-  msg+='👥 Pessoas: '+pedidos.reduce(function(a,p){return a+(p.qtd||0);},0)+'\n';
-  var tp=pedidos.reduce(function(a,p){return a+(p.pao||0);},0);
-  var tm=pedidos.reduce(function(a,p){return a+(p.massinha||0);},0);
-  var tc=pedidos.reduce(function(a,p){return a+(p.cafe||0);},0);
+  msg+='\n'+sep+'\n TOTAL\n';
+  msg+=' Pessoas: '+pedidos.reduce(function(a,p){return a+(p.qtd||0);},0)+'\n';
+  var tp =pedidos.reduce(function(a,p){return a+(p.pao||0);},0);
+  var tm =pedidos.reduce(function(a,p){return a+(p.massinha||0);},0);
+  var tc =pedidos.reduce(function(a,p){return a+(p.cafe||0);},0);
   var tc2=pedidos.reduce(function(a,p){return a+(p.choco260||0);},0);
   var tc9=pedidos.reduce(function(a,p){return a+(p.choco900||0);},0);
   var trl=pedidos.reduce(function(a,p){return a+(p.refriLata||0);},0);
   var tr2=pedidos.reduce(function(a,p){return a+(p.refri2l||0);},0);
-  if(tp)  msg+='🥐 Pão: '+tp+' unid.\n';
-  if(tm)  msg+='🥐 Massinha: '+tm+' unid.\n';
-  if(tc)  msg+='☕ Café: '+tc+' unid.\n';
-  if(tc2) msg+='🍫 Chocoleite 260ml: '+tc2+'\n';
-  if(tc9) msg+='🍫 Chocoleite 900ml: '+tc9+'\n';
-  if(trl) msg+='🥤 Refri Lata: '+trl+'\n';
-  if(tr2) msg+='🥤 Refri 2L: '+tr2+'\n';
+  if(tp)  msg+=' Pão: '+tp+' unid.\n';
+  if(tm)  msg+=' Massinha: '+tm+' unid.\n';
+  if(tc)  msg+=' Café: '+tc+' unid.\n';
+  if(tc2) msg+=' Chocoleite 260ml: '+tc2+'\n';
+  if(tc9) msg+=' Chocoleite 900ml: '+tc9+'\n';
+  if(trl) msg+=' Refri Lata: '+trl+'\n';
+  if(tr2) msg+=' Refri 2L: '+tr2+'\n';
   return msg;
 }
 
@@ -463,7 +608,9 @@ function abrirWpp() {
   window.open('https://wa.me/?text='+txt,'_blank');
 }
 
+// ============================================================
 //  PIN DE ACESSO RH
+// ============================================================
 function abrirPin(aba) {
   if (rhAutenticado) { setTab(aba); return; }
   pinDestino = aba;
@@ -533,9 +680,10 @@ function sairRH() {
   if (badge) badge.style.display='none';
 }
 
-// ---- INIT ----
+// ============================================================
+//  INIT
+// ============================================================
 document.addEventListener('DOMContentLoaded', function() {
-  // Carrega setores salvos (se o RH tiver adicionado/removido antes)
   var setoresSalvos = localStorage.getItem('setores_usimetal');
   if (setoresSalvos) {
     setores = JSON.parse(setoresSalvos);
@@ -544,4 +692,5 @@ document.addEventListener('DOMContentLoaded', function() {
   updateRelogio();
   setInterval(updateRelogio, 30000);
   document.getElementById('data').value = new Date().toISOString().split('T')[0];
+  carregarPedidos();
 });
