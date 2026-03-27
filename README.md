@@ -13,9 +13,8 @@ Funcionalidades
 * Painel RH: Visualização centralizada de todos os pedidos do dia.
 * Relatório Mensal: Consolidação de dados por setor para conferência.
 * Exportação: Botão para baixar os dados em formato CSV (Excel).
-* Segurança: Áreas restritas protegidas por PIN (**1234**).
+* Segurança: Áreas restritas protegidas por PIN (****).
 
-Observações Importantes
-O sistema utiliza o localStorage, ainda desenvolvendo para rodar no servidor da empresa.
+O sistema utiliza o Supabase,e esta no servidor da Vercel.
 
 Desenvolvido para uso interno — Usimetal
