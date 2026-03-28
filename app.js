@@ -32,9 +32,16 @@ var SETORES = [
   'Pintura', 'Ajustagem', 'Montagem', 'Expedição'
 ];
 
-const PIN_CORRETO = '1234';
+// SHA-256 do PIN correto — gerado com: crypto.subtle.digest('SHA-256', new TextEncoder().encode(''))
+// Para trocar o PIN: gere um novo hash e substitua apenas esta string.
+const PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 let pinDestino    = null;
 let rhAutenticado = false;
+
+async function sha256(texto) {
+  var buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buffer)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
 
 let pedidos = [];
 let setores = SETORES.map(function(nome, i){ return { id: i+1, nome: nome }; });
@@ -651,10 +658,11 @@ function pinKey(e, idx) {
   if (e.key==='Escape') fecharPin();
 }
 
-function confirmarPin() {
+async function confirmarPin() {
   var digitado = [0,1,2,3].map(function(i){ return document.getElementById('pin'+i).value; }).join('');
   if (digitado.length<4) { document.getElementById('pin-erro').textContent='Digite os 4 dígitos.'; return; }
-  if (digitado === PIN_CORRETO) {
+  var hashDigitado = await sha256(digitado);
+  if (hashDigitado === PIN_HASH) {
     rhAutenticado = true;
     fecharPin();
     setTab(pinDestino);
