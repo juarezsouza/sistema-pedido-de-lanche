@@ -32,8 +32,7 @@ var SETORES = [
   'Pintura', 'Ajustagem', 'Montagem', 'Expedição'
 ];
 
-// SHA-256 do PIN correto — gerado com: crypto.subtle.digest('SHA-256', new TextEncoder().encode(''))
-// Para trocar o PIN: gere um novo hash e substitua apenas esta string.
+// SHA-256 do PIN — para trocar: gere novo hash no console e substitua abaixo
 const PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 let pinDestino    = null;
 let rhAutenticado = false;
@@ -232,7 +231,7 @@ async function salvarPedido() {
     await salvarPedidoSupabase(pedido);
     pedidos.unshift(pedido);
     limparForm();
-    mostrarFeedback('sec-pedido', 'alert-success', '✅ Pedido salvo com sucesso! Confira no Painel RH.');
+    mostrarFeedback('sec-pedido', 'alert-success', '✅ Pedido salvo com sucesso!');
   } catch(e) {
     mostrarFeedback('sec-pedido', 'alert-danger', '❌ Erro ao salvar pedido. Verifique a conexão.');
     console.error(e);
@@ -323,7 +322,7 @@ async function limparTodos() {
 }
 
 // ============================================================
-//  RELATÓRIO MENSAL — usa TODOS os pedidos (ativos + excluídos)
+//  RELATÓRIO MENSAL
 // ============================================================
 async function renderRelatorio() {
   var mesAtual = new Date().getMonth();
@@ -337,7 +336,6 @@ async function renderRelatorio() {
 
   var todosDoPeriodo = [];
   try {
-    // Busca TODOS (ativos e inativos) para o relatório ficar completo
     todosDoPeriodo = await sbFetch('pedidos?order=id.desc');
   } catch(e) {
     console.error('Erro ao carregar relatório:', e);
@@ -352,15 +350,16 @@ async function renderRelatorio() {
   var porSetor = {};
   pedidosFiltrados.forEach(function(p) {
     var s = p.setor || 'Sem setor';
-    if (!porSetor[s]) porSetor[s] = { qtd:0, pao:0, massinha:0, cafe:0, choco260:0, choco900:0, refriLata:0, refri2l:0 };
-    porSetor[s].qtd      += p.qtd       || 0;
-    porSetor[s].pao      += p.pao       || 0;
-    porSetor[s].massinha += p.massinha  || 0;
-    porSetor[s].cafe     += p.cafe      || 0;
-    porSetor[s].choco260 += p.choco260  || 0;
-    porSetor[s].choco900 += p.choco900  || 0;
-    porSetor[s].refriLata+= p.refri_lata|| 0;
-    porSetor[s].refri2l  += p.refri2l   || 0;
+    if (!porSetor[s]) porSetor[s] = { ids:[], qtd:0, pao:0, massinha:0, cafe:0, choco260:0, choco900:0, refriLata:0, refri2l:0 };
+    porSetor[s].ids.push(p.id);
+    porSetor[s].qtd      += p.qtd        || 0;
+    porSetor[s].pao      += p.pao        || 0;
+    porSetor[s].massinha += p.massinha   || 0;
+    porSetor[s].cafe     += p.cafe       || 0;
+    porSetor[s].choco260 += p.choco260   || 0;
+    porSetor[s].choco900 += p.choco900   || 0;
+    porSetor[s].refriLata+= p.refri_lata || 0;
+    porSetor[s].refri2l  += p.refri2l    || 0;
   });
 
   var optsMes = meses.map(function(m,i){
@@ -376,6 +375,7 @@ async function renderRelatorio() {
 
   var linhasTabela = setoresOrdenados.length ? setoresOrdenados.map(function(s) {
     var r = porSetor[s];
+    var idsStr = r.ids.join(',');
     return '<tr style="border-bottom:1px solid var(--border);">'+
       '<td style="padding:9px 10px;font-weight:600;color:var(--text-primary);">'+s+'</td>'+
       '<td style="padding:9px 10px;text-align:center;">'+r.qtd+'</td>'+
@@ -386,8 +386,13 @@ async function renderRelatorio() {
       '<td style="padding:9px 10px;text-align:center;">'+(r.choco900||'—')+'</td>'+
       '<td style="padding:9px 10px;text-align:center;">'+(r.refriLata||'—')+'</td>'+
       '<td style="padding:9px 10px;text-align:center;">'+(r.refri2l||'—')+'</td>'+
+      '<td style="padding:9px 10px;text-align:center;">'+
+        '<button onclick="deletarSetorRelatorio(\''+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"','"+idsStr+'\')'+
+          '" style="background:none;border:1px solid var(--danger-border);color:var(--danger-text);border-radius:var(--radius-sm);padding:3px 10px;font-size:12px;cursor:pointer;">'+
+          '🗑 Excluir</button>'+
+      '</td>'+
     '</tr>';
-  }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--text-hint);padding:28px;">Nenhum pedido registrado em '+meses[filtroMes]+'/'+filtroAno+'</td></tr>';
+  }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text-hint);padding:28px;">Nenhum pedido registrado em '+meses[filtroMes]+'/'+filtroAno+'</td></tr>';
 
   var totalRow = setoresOrdenados.reduce(function(acc, s) {
     var r = porSetor[s];
@@ -407,6 +412,7 @@ async function renderRelatorio() {
       '<td style="padding:10px;text-align:center;">'+(totalRow.choco900||'—')+'</td>'+
       '<td style="padding:10px;text-align:center;">'+(totalRow.refriLata||'—')+'</td>'+
       '<td style="padding:10px;text-align:center;">'+(totalRow.refri2l||'—')+'</td>'+
+      '<td></td>'+
     '</tr>' : '';
 
   var conteudo =
@@ -433,6 +439,7 @@ async function renderRelatorio() {
               '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">900ml</th>'+
               '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">R.Lata</th>'+
               '<th style="padding:9px 10px;color:var(--text-secondary);font-size:11px;text-transform:uppercase;text-align:center;">R.2L</th>'+
+              '<th style="padding:9px 10px;"></th>'+
             '</tr>'+
           '</thead>'+
           '<tbody>'+linhasTabela+totalLinhaHTML+'</tbody>'+
@@ -441,6 +448,23 @@ async function renderRelatorio() {
     '</div>';
 
   document.getElementById('sec-relatorio').innerHTML = conteudo;
+}
+
+// ============================================================
+//  DELETAR PEDIDOS DE UM SETOR NO RELATÓRIO
+// ============================================================
+async function deletarSetorRelatorio(nomeSetor, idsStr) {
+  var ids = idsStr.split(',').map(Number).filter(Boolean);
+  if (!confirm('Excluir ' + ids.length + ' pedido(s) do setor "' + nomeSetor + '"?\nEsta ação não pode ser desfeita.')) return;
+  try {
+    await Promise.all(ids.map(function(id) {
+      return sbFetch('pedidos?id=eq.' + id, { method: 'PATCH', body: JSON.stringify({ ativo: false }) });
+    }));
+    renderRelatorio();
+  } catch(e) {
+    alert('Erro ao excluir pedidos. Verifique a conexão.');
+    console.error(e);
+  }
 }
 
 // ============================================================
@@ -466,14 +490,14 @@ async function exportarRelatorio() {
   pedidosFiltrados.forEach(function(p) {
     var s = p.setor || 'Sem setor';
     if (!porSetor[s]) porSetor[s] = { qtd:0, pao:0, massinha:0, cafe:0, choco260:0, choco900:0, refriLata:0, refri2l:0 };
-    porSetor[s].qtd      += p.qtd       || 0;
-    porSetor[s].pao      += p.pao       || 0;
-    porSetor[s].massinha += p.massinha  || 0;
-    porSetor[s].cafe     += p.cafe      || 0;
-    porSetor[s].choco260 += p.choco260  || 0;
-    porSetor[s].choco900 += p.choco900  || 0;
-    porSetor[s].refriLata+= p.refri_lata|| 0;
-    porSetor[s].refri2l  += p.refri2l   || 0;
+    porSetor[s].qtd      += p.qtd        || 0;
+    porSetor[s].pao      += p.pao        || 0;
+    porSetor[s].massinha += p.massinha   || 0;
+    porSetor[s].cafe     += p.cafe       || 0;
+    porSetor[s].choco260 += p.choco260   || 0;
+    porSetor[s].choco900 += p.choco900   || 0;
+    porSetor[s].refriLata+= p.refri_lata || 0;
+    porSetor[s].refri2l  += p.refri2l    || 0;
   });
 
   var csv = 'Setor;Pessoas;Pão;Massinha;Café;Chocoleite 260ml;Chocoleite 900ml;Refri Lata;Refri 2L\n';
@@ -659,6 +683,7 @@ function pinKey(e, idx) {
 }
 
 async function confirmarPin() {
+  if (!document.getElementById('pin-overlay').classList.contains('open')) return;
   var digitado = [0,1,2,3].map(function(i){ return document.getElementById('pin'+i).value; }).join('');
   if (digitado.length<4) { document.getElementById('pin-erro').textContent='Digite os 4 dígitos.'; return; }
   var hashDigitado = await sha256(digitado);
