@@ -151,6 +151,7 @@ function checkDeadline() {
 //  TABS
 // ============================================================
 function setTab(tab) {
+  if (!tab) return;
   document.querySelectorAll('.tab').forEach(function(el){ el.classList.remove('active'); });
   document.querySelectorAll('.section').forEach(function(el){ el.classList.remove('active'); });
   document.querySelector('.tab[data-tab="' + tab + '"]').classList.add('active');
@@ -689,8 +690,9 @@ async function confirmarPin() {
   var hashDigitado = await sha256(digitado);
   if (hashDigitado === PIN_HASH) {
     rhAutenticado = true;
+    var destino = pinDestino;
     fecharPin();
-    setTab(pinDestino);
+    setTab(destino);
     var badge = document.getElementById('rh-badge');
     if (badge) badge.style.display='inline-flex';
   } else {
