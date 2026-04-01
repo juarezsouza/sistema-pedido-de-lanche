@@ -608,16 +608,3 @@ body {
   font-weight: 500;
   color: var(--text-primary);
 }
-/* ---- RELATÓRIO — BOTÃO EXCLUIR SETOR ---- */
-.btn-excluir-setor {
-  background: none;
-  border: 1px solid var(--danger-border);
-  color: var(--danger-text);
-  border-radius: var(--radius-sm);
-  padding: 4px 12px;
-  font-size: 12px;
-  font-family: var(--font);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.btn-excluir-setor:hover { background: var(--danger-bg); }

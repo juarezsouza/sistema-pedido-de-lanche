@@ -375,9 +375,8 @@ async function deletarSetorRelatorio(nomeSetor) {
   var filtroMes = parseInt(document.getElementById('rel-filtro-mes').value);
   var filtroAno = parseInt(document.getElementById('rel-filtro-ano').value);
 
-  // Busca os IDs do setor na hora de excluir
   var todos = [];
-  try { todos = await sbFetch('pedidos?ativo=eq.true&order=id.desc'); } catch(e) { alert('Erro ao buscar pedidos.'); return; }
+  try { todos = await sbFetch('pedidos?order=id.desc'); } catch(e) { alert('Erro ao buscar pedidos.'); return; }
 
   var ids = todos
     .filter(function(p) {
@@ -388,11 +387,11 @@ async function deletarSetorRelatorio(nomeSetor) {
     .map(function(p) { return p.id; });
 
   if (!ids.length) { alert('Nenhum pedido encontrado para este setor.'); return; }
-  if (!confirm('Excluir ' + ids.length + ' pedido(s) do setor "' + nomeSetor + '"?\nEsta ação não pode ser desfeita.')) return;
+  if (!confirm('Excluir ' + ids.length + ' pedido(s) do setor "' + nomeSetor + '"?\nEsta ação remove permanentemente do relatório e do painel.')) return;
 
   try {
     await Promise.all(ids.map(function(id) {
-      return sbFetch('pedidos?id=eq.' + id, { method: 'PATCH', body: JSON.stringify({ ativo: false }) });
+      return sbFetch('pedidos?id=eq.' + id, { method: 'DELETE' });
     }));
     renderRelatorio();
   } catch(e) {
