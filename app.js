@@ -23,16 +23,12 @@ async function sbFetch(path, options = {}) {
   return text ? JSON.parse(text) : [];
 }
 
-// ============================================================
-//  SETORES — edite a lista abaixo se precisar
-// ============================================================
 var SETORES = [
   'RH', 'Compras', 'Financeiro', 'PCP', 'Projetos',
   'Programação', 'Corte', 'Dobra', 'Solda', 'DCQ',
   'Pintura', 'Ajustagem', 'Montagem', 'Expedição'
 ];
 
-// SHA-256 do PIN — para trocar: gere novo hash no console e substitua abaixo
 const PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 let pinDestino    = null;
 let rhAutenticado = false;
@@ -45,68 +41,34 @@ async function sha256(texto) {
 let pedidos = [];
 let setores = SETORES.map(function(nome, i){ return { id: i+1, nome: nome }; });
 
-// ============================================================
-//  CARREGAR PEDIDOS DO SUPABASE
-// ============================================================
 async function carregarPedidos() {
   try {
     var data = await sbFetch('pedidos?ativo=eq.true&order=id.desc');
     pedidos = data.map(function(p) {
       return {
-        id:          p.id,
-        data:        p.data,
-        setor:       p.setor,
-        qtd:         p.qtd,
-        horario:     p.horario,
-        pao:         p.pao,
-        massinha:    p.massinha,
-        cafe:        p.cafe,
-        saborLanche: p.sabor_lanche,
-        choco260:    p.choco260,
-        choco900:    p.choco900,
-        refriLata:   p.refri_lata,
-        refri2l:     p.refri2l,
-        saborRefri:  p.sabor_refri,
-        obs:         p.obs,
-        criadoEm:    p.criado_em
+        id: p.id, data: p.data, setor: p.setor, qtd: p.qtd,
+        horario: p.horario, pao: p.pao, massinha: p.massinha, cafe: p.cafe,
+        saborLanche: p.sabor_lanche, choco260: p.choco260, choco900: p.choco900,
+        refriLata: p.refri_lata, refri2l: p.refri2l, saborRefri: p.sabor_refri,
+        obs: p.obs, criadoEm: p.criado_em
       };
     });
-  } catch(e) {
-    console.error('Erro ao carregar pedidos:', e);
-  }
+  } catch(e) { console.error('Erro ao carregar pedidos:', e); }
 }
 
-// ============================================================
-//  SALVAR PEDIDO NO SUPABASE
-// ============================================================
 async function salvarPedidoSupabase(pedido) {
   return await sbFetch('pedidos', {
     method: 'POST',
     body: JSON.stringify({
-      id:           pedido.id,
-      data:         pedido.data,
-      setor:        pedido.setor,
-      qtd:          pedido.qtd,
-      horario:      pedido.horario,
-      pao:          pedido.pao,
-      massinha:     pedido.massinha,
-      cafe:         pedido.cafe,
-      sabor_lanche: pedido.saborLanche,
-      choco260:     pedido.choco260,
-      choco900:     pedido.choco900,
-      refri_lata:   pedido.refriLata,
-      refri2l:      pedido.refri2l,
-      sabor_refri:  pedido.saborRefri,
-      obs:          pedido.obs,
-      criado_em:    pedido.criadoEm,
-      ativo:        true
+      id: pedido.id, data: pedido.data, setor: pedido.setor, qtd: pedido.qtd,
+      horario: pedido.horario, pao: pedido.pao, massinha: pedido.massinha, cafe: pedido.cafe,
+      sabor_lanche: pedido.saborLanche, choco260: pedido.choco260, choco900: pedido.choco900,
+      refri_lata: pedido.refriLata, refri2l: pedido.refri2l, sabor_refri: pedido.saborRefri,
+      obs: pedido.obs, criado_em: pedido.criadoEm, ativo: true
     })
   });
 }
 
-// ============================================================
-//  EXCLUIR PEDIDO — marca como inativo (não some do relatório)
-// ============================================================
 async function excluirPedidoSupabase(id) {
   return await sbFetch('pedidos?id=eq.' + id, {
     method: 'PATCH',
@@ -114,9 +76,6 @@ async function excluirPedidoSupabase(id) {
   });
 }
 
-// ============================================================
-//  RELÓGIO E DATA
-// ============================================================
 function updateRelogio() {
   var now = new Date();
   var h = String(now.getHours()).padStart(2,'0');
@@ -147,9 +106,6 @@ function checkDeadline() {
   }
 }
 
-// ============================================================
-//  TABS
-// ============================================================
 function setTab(tab) {
   if (!tab) return;
   document.querySelectorAll('.tab').forEach(function(el){ el.classList.remove('active'); });
@@ -162,9 +118,6 @@ function setTab(tab) {
   if (tab === 'relatorio') renderRelatorio();
 }
 
-// ============================================================
-//  HELPERS
-// ============================================================
 function v(id) { return document.getElementById(id).value.trim(); }
 function n(id) { return parseInt(document.getElementById(id).value) || 0; }
 
@@ -184,32 +137,21 @@ function mostrarFeedback(secId, classe, msg) {
   el.style.marginTop = '12px';
   var sec = document.getElementById(secId);
   var btnRow = sec.querySelector('.btn-row');
-  if (btnRow) {
-    btnRow.insertAdjacentElement('afterend', el);
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } else {
-    sec.appendChild(el);
-  }
+  if (btnRow) { btnRow.insertAdjacentElement('afterend', el); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  else { sec.appendChild(el); }
   setTimeout(function(){ el.remove(); }, 4000);
 }
 
-// ============================================================
-//  POPULAR SELECT DE SETORES
-// ============================================================
 function popularSelectSetor() {
   var sel = document.getElementById('setor');
   sel.innerHTML = '<option value="">Selecione o setor...</option>';
   setores.forEach(function(s) {
     var opt = document.createElement('option');
-    opt.value = s.nome;
-    opt.textContent = s.nome;
+    opt.value = s.nome; opt.textContent = s.nome;
     sel.appendChild(opt);
   });
 }
 
-// ============================================================
-//  SALVAR PEDIDO
-// ============================================================
 async function salvarPedido() {
   var err = document.getElementById('msg-erro');
   if (!v('data') || !v('setor') || !n('qtd') || !v('horario')) {
@@ -218,7 +160,6 @@ async function salvarPedido() {
     return;
   }
   err.style.display = 'none';
-
   var pedido = {
     id: Date.now(), data: v('data'), setor: v('setor'), qtd: n('qtd'),
     horario: v('horario'), pao: n('pao'), massinha: n('massinha'), cafe: n('cafe'),
@@ -227,7 +168,6 @@ async function salvarPedido() {
     obs: v('obs'),
     criadoEm: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })
   };
-
   try {
     await salvarPedidoSupabase(pedido);
     pedidos.unshift(pedido);
@@ -239,9 +179,6 @@ async function salvarPedido() {
   }
 }
 
-// ============================================================
-//  BADGE HORÁRIO
-// ============================================================
 function badgeHorario(h) {
   if (h && h.indexOf('Manhã') >= 0)  return '<span class="badge badge-manha">Manhã 07:00</span>';
   if (h && h.indexOf('Tarde') >= 0)  return '<span class="badge badge-tarde">Tarde 15:00</span>';
@@ -249,9 +186,6 @@ function badgeHorario(h) {
   return '<span class="badge badge-madrugada">Madrugada</span>';
 }
 
-// ============================================================
-//  PAINEL RH
-// ============================================================
 function renderPainel() {
   var totalPedidos = pedidos.length;
   var totalPessoas = pedidos.reduce(function(a,p){ return a+(p.qtd||0); },0);
@@ -292,9 +226,6 @@ function renderPainel() {
   }).join('');
 }
 
-// ============================================================
-//  EXCLUIR PEDIDO
-// ============================================================
 async function excluirPedido(id) {
   if (!confirm('Excluir este pedido?')) return;
   try {
@@ -310,10 +241,7 @@ async function excluirPedido(id) {
 async function limparTodos() {
   if (!confirm('Excluir TODOS os pedidos? Esta ação não pode ser desfeita.')) return;
   try {
-    await sbFetch('pedidos?ativo=eq.true', {
-      method: 'PATCH',
-      body: JSON.stringify({ ativo: false })
-    });
+    await sbFetch('pedidos?ativo=eq.true', { method: 'PATCH', body: JSON.stringify({ ativo: false }) });
     pedidos = [];
     renderPainel();
   } catch(e) {
@@ -322,9 +250,6 @@ async function limparTodos() {
   }
 }
 
-// ============================================================
-//  RELATÓRIO MENSAL
-// ============================================================
 async function renderRelatorio() {
   var mesAtual = new Date().getMonth();
   var anoAtual = new Date().getFullYear();
@@ -338,9 +263,7 @@ async function renderRelatorio() {
   var todosDoPeriodo = [];
   try {
     todosDoPeriodo = await sbFetch('pedidos?order=id.desc');
-  } catch(e) {
-    console.error('Erro ao carregar relatório:', e);
-  }
+  } catch(e) { console.error('Erro ao carregar relatório:', e); }
 
   var pedidosFiltrados = todosDoPeriodo.filter(function(p) {
     if (!p.data) return false;
@@ -351,8 +274,7 @@ async function renderRelatorio() {
   var porSetor = {};
   pedidosFiltrados.forEach(function(p) {
     var s = p.setor || 'Sem setor';
-    if (!porSetor[s]) porSetor[s] = { ids:[], qtd:0, pao:0, massinha:0, cafe:0, choco260:0, choco900:0, refriLata:0, refri2l:0 };
-    porSetor[s].ids.push(p.id);
+    if (!porSetor[s]) porSetor[s] = { qtd:0, pao:0, massinha:0, cafe:0, choco260:0, choco900:0, refriLata:0, refri2l:0 };
     porSetor[s].qtd      += p.qtd        || 0;
     porSetor[s].pao      += p.pao        || 0;
     porSetor[s].massinha += p.massinha   || 0;
@@ -376,7 +298,7 @@ async function renderRelatorio() {
 
   var linhasTabela = setoresOrdenados.length ? setoresOrdenados.map(function(s) {
     var r = porSetor[s];
-    var idsStr = r.ids.join(',');
+    var nomeEscapado = s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return '<tr style="border-bottom:1px solid var(--border);">'+
       '<td style="padding:9px 10px;font-weight:600;color:var(--text-primary);">'+s+'</td>'+
       '<td style="padding:9px 10px;text-align:center;">'+r.qtd+'</td>'+
@@ -388,9 +310,7 @@ async function renderRelatorio() {
       '<td style="padding:9px 10px;text-align:center;">'+(r.refriLata||'—')+'</td>'+
       '<td style="padding:9px 10px;text-align:center;">'+(r.refri2l||'—')+'</td>'+
       '<td style="padding:9px 10px;text-align:center;">'+
-        '<button onclick="deletarSetorRelatorio(\''+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"','"+idsStr+'\')'+
-          '" style="background:none;border:1px solid var(--danger-border);color:var(--danger-text);border-radius:var(--radius-sm);padding:3px 10px;font-size:12px;cursor:pointer;">'+
-          '🗑 Excluir</button>'+
+        '<button class="btn-excluir-setor" onclick="deletarSetorRelatorio(\''+nomeEscapado+'\')">🗑 Excluir</button>'+
       '</td>'+
     '</tr>';
   }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text-hint);padding:28px;">Nenhum pedido registrado em '+meses[filtroMes]+'/'+filtroAno+'</td></tr>';
@@ -451,35 +371,44 @@ async function renderRelatorio() {
   document.getElementById('sec-relatorio').innerHTML = conteudo;
 }
 
-// ============================================================
-//  DELETAR PEDIDOS DE UM SETOR NO RELATÓRIO
-// ============================================================
-async function deletarSetorRelatorio(nomeSetor, idsStr) {
-  var ids = idsStr.split(',').map(Number).filter(Boolean);
+async function deletarSetorRelatorio(nomeSetor) {
+  var filtroMes = parseInt(document.getElementById('rel-filtro-mes').value);
+  var filtroAno = parseInt(document.getElementById('rel-filtro-ano').value);
+
+  // Busca os IDs do setor na hora de excluir
+  var todos = [];
+  try { todos = await sbFetch('pedidos?order=id.desc'); } catch(e) { alert('Erro ao buscar pedidos.'); return; }
+
+  var ids = todos
+    .filter(function(p) {
+      if (!p.data || p.setor !== nomeSetor) return false;
+      var d = new Date(p.data + 'T12:00:00');
+      return d.getMonth() === filtroMes && d.getFullYear() === filtroAno;
+    })
+    .map(function(p) { return p.id; });
+
+  if (!ids.length) { alert('Nenhum pedido encontrado para este setor.'); return; }
   if (!confirm('Excluir ' + ids.length + ' pedido(s) do setor "' + nomeSetor + '"?\nEsta ação não pode ser desfeita.')) return;
+
   try {
     await Promise.all(ids.map(function(id) {
       return sbFetch('pedidos?id=eq.' + id, { method: 'PATCH', body: JSON.stringify({ ativo: false }) });
     }));
     renderRelatorio();
   } catch(e) {
-    alert('Erro ao excluir pedidos. Verifique a conexão.');
+    alert('Erro ao excluir. Verifique a conexão.');
     console.error(e);
   }
 }
 
-// ============================================================
-//  EXPORTAR CSV
-// ============================================================
 async function exportarRelatorio() {
   var filtroMes = parseInt(document.getElementById('rel-filtro-mes').value);
   var filtroAno = parseInt(document.getElementById('rel-filtro-ano').value);
   var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
   var todosDoPeriodo = [];
-  try {
-    todosDoPeriodo = await sbFetch('pedidos?order=id.desc');
-  } catch(e) { console.error(e); return; }
+  try { todosDoPeriodo = await sbFetch('pedidos?order=id.desc'); }
+  catch(e) { console.error(e); return; }
 
   var pedidosFiltrados = todosDoPeriodo.filter(function(p) {
     if (!p.data) return false;
@@ -516,21 +445,14 @@ async function exportarRelatorio() {
   URL.revokeObjectURL(url);
 }
 
-// ============================================================
-//  SETORES
-// ============================================================
 function renderSetores() {
   var lista = document.getElementById('lista-setores');
-  if (!setores.length) {
-    lista.innerHTML = '<div class="empty">Nenhum setor cadastrado.</div>';
-    return;
-  }
+  if (!setores.length) { lista.innerHTML = '<div class="empty">Nenhum setor cadastrado.</div>'; return; }
   lista.innerHTML = setores.map(function(s) {
     return '<div class="setor-item">'+
       '<span class="setor-nome">'+s.nome+'</span>'+
       '<button class="btn btn-outline" style="font-size:12px;padding:4px 12px;color:var(--danger-text);border-color:var(--danger-border);" onclick="excluirSetor('+s.id+',\''+s.nome.replace(/'/g,"\\'")+'\')">' +
-        'Remover'+
-      '</button>'+
+        'Remover</button>'+
     '</div>';
   }).join('');
 }
@@ -539,14 +461,12 @@ function adicionarSetor() {
   var nome  = document.getElementById('novo-setor').value.trim();
   var msgEl = document.getElementById('msg-setor');
   msgEl.style.display = 'none';
-
   if (!nome) {
     msgEl.className = 'alert alert-danger';
     msgEl.textContent = 'Digite o nome do setor.';
     msgEl.style.display = 'block';
     return;
   }
-
   var existe = setores.some(function(s){ return s.nome.toLowerCase() === nome.toLowerCase(); });
   if (existe) {
     msgEl.className = 'alert alert-danger';
@@ -554,7 +474,6 @@ function adicionarSetor() {
     msgEl.style.display = 'block';
     return;
   }
-
   var novoId = setores.length ? Math.max.apply(null, setores.map(function(s){ return s.id; })) + 1 : 1;
   setores.push({ id: novoId, nome: nome });
   salvarSetoresStorage();
@@ -579,9 +498,6 @@ function salvarSetoresStorage() {
   localStorage.setItem('setores_usimetal', JSON.stringify(setores));
 }
 
-// ============================================================
-//  WHATSAPP
-// ============================================================
 function gerarMensagem() {
   if (!pedidos.length) return 'Nenhum pedido registrado.';
   var agora = new Date().toLocaleString('pt-BR');
@@ -603,9 +519,9 @@ function gerarMensagem() {
   });
   msg+='\n'+sep+'\n TOTAL\n';
   msg+=' Pessoas: '+pedidos.reduce(function(a,p){return a+(p.qtd||0);},0)+'\n';
-  var tp =pedidos.reduce(function(a,p){return a+(p.pao||0);},0);
-  var tm =pedidos.reduce(function(a,p){return a+(p.massinha||0);},0);
-  var tc =pedidos.reduce(function(a,p){return a+(p.cafe||0);},0);
+  var tp=pedidos.reduce(function(a,p){return a+(p.pao||0);},0);
+  var tm=pedidos.reduce(function(a,p){return a+(p.massinha||0);},0);
+  var tc=pedidos.reduce(function(a,p){return a+(p.cafe||0);},0);
   var tc2=pedidos.reduce(function(a,p){return a+(p.choco260||0);},0);
   var tc9=pedidos.reduce(function(a,p){return a+(p.choco900||0);},0);
   var trl=pedidos.reduce(function(a,p){return a+(p.refriLata||0);},0);
@@ -640,9 +556,6 @@ function abrirWpp() {
   window.open('https://wa.me/?text='+txt,'_blank');
 }
 
-// ============================================================
-//  PIN DE ACESSO RH
-// ============================================================
 function abrirPin(aba) {
   if (rhAutenticado) { setTab(aba); return; }
   pinDestino = aba;
@@ -715,14 +628,9 @@ function sairRH() {
   if (badge) badge.style.display='none';
 }
 
-// ============================================================
-//  INIT
-// ============================================================
 document.addEventListener('DOMContentLoaded', function() {
   var setoresSalvos = localStorage.getItem('setores_usimetal');
-  if (setoresSalvos) {
-    setores = JSON.parse(setoresSalvos);
-  }
+  if (setoresSalvos) { setores = JSON.parse(setoresSalvos); }
   popularSelectSetor();
   updateRelogio();
   setInterval(updateRelogio, 30000);
