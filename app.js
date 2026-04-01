@@ -310,7 +310,7 @@ async function renderRelatorio() {
       '<td style="padding:9px 10px;text-align:center;">'+(r.refriLata||'—')+'</td>'+
       '<td style="padding:9px 10px;text-align:center;">'+(r.refri2l||'—')+'</td>'+
       '<td style="padding:9px 10px;text-align:center;">'+
-        '<button class="btn-excluir-setor" onclick="deletarSetorRelatorio(\''+nomeEscapado+'\')">🗑 Excluir</button>'+
+        '<button class="btn-excluir-setor" onclick="event.stopPropagation();deletarSetorRelatorio(\''+nomeEscapado+'\')">🗑 Excluir</button>'+
       '</td>'+
     '</tr>';
   }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text-hint);padding:28px;">Nenhum pedido registrado em '+meses[filtroMes]+'/'+filtroAno+'</td></tr>';
