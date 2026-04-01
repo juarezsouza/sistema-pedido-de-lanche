@@ -377,7 +377,7 @@ async function deletarSetorRelatorio(nomeSetor) {
 
   // Busca os IDs do setor na hora de excluir
   var todos = [];
-  try { todos = await sbFetch('pedidos?order=id.desc'); } catch(e) { alert('Erro ao buscar pedidos.'); return; }
+  try { todos = await sbFetch('pedidos?ativo=eq.true&order=id.desc'); } catch(e) { alert('Erro ao buscar pedidos.'); return; }
 
   var ids = todos
     .filter(function(p) {
